@@ -1,0 +1,142 @@
+function CGFunge() {
+    this.input = [];
+    this.output = '';
+    this.stack = [];
+    this.i = 0;
+    this.j = 0;
+    this.directions = {
+        RIGHT: '>',
+        LEFT: '<',
+        UP: '^',
+        DOWN: 'v'
+    };
+    this.direction = this.directions.RIGHT;
+    this.stringMode = false;
+    this.skip = false;
+    this.end = false;
+}
+
+CGFunge.prototype.addLine = function(line) {
+    this.input.push(line.split(''));
+};
+
+CGFunge.prototype.trace = function() {
+    while (!this.end) {   
+        if (!this.skip)
+            this.testChar(this.input[this.i][this.j]);
+        else
+            this.skip = false;
+        
+        switch(this.direction) {
+            case this.directions.RIGHT:
+                this.j++;
+                break;
+            case this.directions.LEFT:
+                this.j--;
+                break;
+            case this.directions.UP:
+                this.i--;
+                break;
+            case this.directions.DOWN:
+                this.i++;
+                break;
+        }
+    }
+    
+    return this.output;
+};
+
+CGFunge.prototype.testChar = function(char) {
+    if (this.stringMode) {
+        if (char !== '"')
+            this.stack.push(char.charCodeAt());
+        else
+            this.stringMode = !this.stringMode;
+    }
+    else {
+        switch(true) {
+            case /\d/.test(char):
+                this.stack.push(char);
+                break;
+            case /[+\-*]/.test(char):
+                if (this.stack.length > 1) {
+                    var val1 = parseInt(this.stack.pop()),
+                        val2 = parseInt(this.stack.pop()),
+                        res;
+                    switch(char) {
+                        case '+' :
+                            res = val1 + val2;
+                            break;
+                        case '-' :
+                            res = Math.abs(val1 - val2);
+                            break;
+                        case '*' :
+                            res = val1 * val2;
+                            break;
+                    }
+                    this.stack.push(res.toString());
+                }
+                break;
+            case /P/.test(char):
+                this.stack.pop();
+                break;
+            case /X/.test(char):
+                if (this.stack.length > 1) {
+                    var val = this.stack[this.stack.length - 1];
+                    this.stack[this.stack.length - 1] = this.stack[this.stack.length - 2];
+                    this.stack[this.stack.length - 2] = val;
+                }
+                break;
+            case /D/.test(char):
+                if (this.stack.length > 0)
+                    this.stack.push(this.stack[this.stack.length - 1]);
+                break;
+            case /[\^v><]/.test(char):
+                this.direction = char;
+                break;
+            case /_/.test(char):
+                this.direction = (this.stack.pop() === '0') ?
+                    this.directions.RIGHT :
+                    this.directions.LEFT;
+                break;
+            case /\|/.test(char):
+                this.direction = (this.stack.pop() === '0') ?
+                    this.direction = this.directions.DOWN :
+                    this.direction = this.directions.UP;
+                break;
+            case /\"/.test(char):
+                this.stringMode = !this.stringMode;
+                break;
+            case /I/.test(char):
+                this.output += this.stack.pop();
+                break;
+            case /C/.test(char):
+                this.output += String.fromCharCode(this.stack.pop());
+                break;
+            case /S/.test(char):
+                this.skip = true;
+                break;
+            case /E/.test(char):
+                this.end = true;
+                break;
+        }
+    }
+};
+
+var input = [ '39DD1+*+DI  >11091+   v>v',
+          'v  " on the wall"    < D ',
+          '>>     "reeb fo"      v S',
+          '0v<" bottles "        < C',
+          'X>DSC_SvPD      _25*+Cv |',
+          '       *v   IS        < P',
+          '^IDX-1 <>  SC        0v X',
+          'v   "pass it around"  < 1',
+          '>    " ,nwod eno ekat" ^-',
+          ' Sing it!   ^+55D-1X_ESD<'],
+    cgFunge = new CGFunge();
+
+for (var i = 0; i < input.length; i++)
+    cgFunge.addLine(input[i]);
+
+var result = cgFunge.trace();
+console.log(result);
